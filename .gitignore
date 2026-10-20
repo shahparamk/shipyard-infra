@@ -1,0 +1,23 @@
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfplan
+tfplan
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Variables files can hold sensitive values; commit only examples
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
