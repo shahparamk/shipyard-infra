@@ -1,4 +1,4 @@
-﻿terraform {
+terraform {
   backend "s3" {
     bucket       = "shipyard-tfstate-717279721195"
     key          = "bootstrap/terraform.tfstate"
