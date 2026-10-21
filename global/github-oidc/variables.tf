@@ -4,10 +4,10 @@ variable "aws_account_id" {
   default     = "717279721195"
 }
 
-variable "github_repo" {
-  description = "GitHub repo allowed to assume the CI roles (owner/name)"
+variable "github_oidc_sub_prefix" {
+  description = "Immutable OIDC subject prefix for the repo (owner@id/repo@id). From: gh api repos/<owner>/<repo>/actions/oidc/customization/sub"
   type        = string
-  default     = "shahparamk/shipyard-infra"
+  default     = "repo:shahparamk@181007379/shipyard-infra@1426498385"
 }
 
 variable "state_bucket" {
