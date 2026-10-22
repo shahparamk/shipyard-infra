@@ -57,7 +57,7 @@ jobs:
           directory: .
           framework: terraform
           quiet: true
-          soft_fail: true # report-only for now; we'll triage the findings, then enforce
+          
 
   plan:
     name: plan (dev)

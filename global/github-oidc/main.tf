@@ -90,7 +90,9 @@ resource "aws_iam_role" "apply" {
 }
 
 # Trade-off: broad for dev while the platform is being built; to be scoped down later
+
 resource "aws_iam_role_policy_attachment" "apply_admin" {
+  #checkov:skip=CKV_AWS_274:Deliberate for dev while the platform is being built; role is only assumable from the protected dev environment after manual approval. To be scoped down after EKS
   role       = aws_iam_role.apply.name
   policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
 }

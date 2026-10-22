@@ -14,15 +14,37 @@ variable "cidr_block" {
   }
 }
 
-variable "az_count" {
-  description = "How many availability zones to spread subnets across"
-  type        = number
-  default     = 2
+variable "azs" {
+  description = "Availability zones to use, pinned explicitly so subnets never shift if AWS adds or reorders zones"
+  type        = list(string)
 
   validation {
-    condition     = var.az_count >= 2 && var.az_count <= 3
-    error_message = "az_count must be 2 or 3 (EKS needs at least 2 AZs)."
+    condition     = length(var.azs) >= 2 && length(var.azs) <= 3
+    error_message = "Provide 2 or 3 AZs (EKS needs at least 2)."
   }
+}
+
+variable "enable_flow_logs" {
+  description = "Send VPC flow logs to CloudWatch Logs"
+  type        = bool
+  default     = true
+}
+
+variable "flow_log_traffic_type" {
+  description = "REJECT (cheapest, shows blocked traffic), ACCEPT, or ALL"
+  type        = string
+  default     = "REJECT"
+
+  validation {
+    condition     = contains(["ACCEPT", "REJECT", "ALL"], var.flow_log_traffic_type)
+    error_message = "flow_log_traffic_type must be ACCEPT, REJECT, or ALL."
+  }
+}
+
+variable "flow_log_retention_days" {
+  description = "How long CloudWatch keeps flow logs"
+  type        = number
+  default     = 7
 }
 
 variable "enable_nat_gateway" {
