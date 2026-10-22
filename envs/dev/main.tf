@@ -49,6 +49,7 @@ module "rds" {
   name                       = "${local.name}-orders"
   engine_version             = "18.3" # <-- your version from Step 0
   vpc_id                     = module.vpc.vpc_id
+  secret_name                = "shipyard/dev/orders-db"
   subnet_ids                 = module.vpc.private_subnet_ids
   allowed_security_group_ids = [module.eks[0].cluster_security_group_id]
 }

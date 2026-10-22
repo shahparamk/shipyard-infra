@@ -1,3 +1,10 @@
+
+# Generated in memory only: never written to Terraform state or plan files
+ephemeral "random_password" "db" {
+  length           = 32
+  special          = true
+  override_special = "!#$%&*()-_=+[]{}<>:?" # RDS forbids / @ " and spaces
+}
 resource "aws_db_subnet_group" "this" {
   name       = "${var.name}-subnets"
   subnet_ids = var.subnet_ids
@@ -81,8 +88,10 @@ resource "aws_db_instance" "this" {
 
   db_name  = var.db_name
   username = var.username
-  # AWS generates the password and stores it in Secrets Manager; it never appears in code or Terraform state
-  manage_master_user_password = true
+  # Write-only: sent to AWS, never stored in state
+  password_wo         = ephemeral.random_password.db.result
+  password_wo_version = var.credentials_version
+
 
   db_subnet_group_name   = aws_db_subnet_group.this.name
   vpc_security_group_ids = [aws_security_group.this.id]
@@ -104,4 +113,34 @@ resource "aws_db_instance" "this" {
   tags = var.tags
 
   depends_on = [aws_cloudwatch_log_group.this]
+}
+
+# ---------------- Stable-name secret for External Secrets ----------------
+
+resource "aws_secretsmanager_secret" "db" {
+  #checkov:skip=CKV_AWS_149:Encrypted with the AWS-managed Secrets Manager key; a customer-managed KMS key isn't justified for a short-lived dev secret
+  #checkov:skip=CKV2_AWS_57:Not auto-rotated: dev DB is recreated every session; rotate manually by bumping credentials_version
+  name                    = var.secret_name
+  description             = "Connection details for ${var.name} (consumed by External Secrets)"
+  recovery_window_in_days = 0 # delete immediately on teardown so the same name can be recreated next spin-up
+  tags                    = var.tags
+}
+
+resource "aws_secretsmanager_secret_version" "db" {
+  secret_id = aws_secretsmanager_secret.db.id
+
+  # Write-only: the password never appears in state or plan
+  secret_string_wo = jsonencode({
+    host     = aws_db_instance.this.address
+    port     = tostring(aws_db_instance.this.port)
+    dbname   = var.db_name
+    username = var.username
+    password = ephemeral.random_password.db.result
+  })
+  secret_string_wo_version = var.credentials_version
+
+  # If the instance is ever replaced on its own, rewrite the secret so they never drift apart
+  lifecycle {
+    replace_triggered_by = [aws_db_instance.this.id]
+  }
 }

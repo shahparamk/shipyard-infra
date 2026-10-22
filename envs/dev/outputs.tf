@@ -31,5 +31,5 @@ output "rds_address" {
 }
 
 output "rds_secret_arn" {
-  value = try(module.rds[0].master_user_secret_arn, null)
+  value = try(module.rds[0].secret_arn, null)
 }
