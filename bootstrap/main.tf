@@ -2,6 +2,10 @@
 # Name includes the account ID so it is globally unique.
 
 resource "aws_s3_bucket" "tfstate" {
+  #checkov:skip=CKV_AWS_144:Single-region dev project; versioning + prevent_destroy protect state, replication would double cost
+  #checkov:skip=CKV_AWS_145:Already encrypted with SSE-S3 (AES256); a customer-managed KMS key adds cost and key-policy overhead with one operator. Revisit for multi-team use
+  #checkov:skip=CKV2_AWS_62:No consumer for event notifications; state changes are visible via Terraform plans and CloudTrail
+  #checkov:skip=CKV_AWS_18:Access logs need a separate log bucket (which would fail this same check); CloudTrail management events cover bucket-level auditing
   bucket = "shipyard-tfstate-${var.aws_account_id}"
 
   # Losing this bucket means losing all Terraform state, so block accidental destroys
@@ -57,6 +61,9 @@ resource "aws_s3_bucket_lifecycle_configuration" "tfstate" {
 
     noncurrent_version_expiration {
       noncurrent_days = 90
+    }
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
     }
   }
 
