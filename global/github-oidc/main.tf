@@ -96,3 +96,66 @@ resource "aws_iam_role_policy_attachment" "apply_admin" {
   role       = aws_iam_role.apply.name
   policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
 }
+
+# ---------------- ECR push role (shipyard-apps, main branch only) ----------------
+
+data "aws_iam_policy_document" "ecr_push_trust" {
+  statement {
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+
+    principals {
+      type        = "Federated"
+      identifiers = [aws_iam_openid_connect_provider.github.arn]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "token.actions.githubusercontent.com:aud"
+      values   = ["sts.amazonaws.com"]
+    }
+
+    # Only pushes to main in shipyard-apps; PRs can build and scan but never reach AWS
+    condition {
+      test     = "StringEquals"
+      variable = "token.actions.githubusercontent.com:sub"
+      values   = ["${var.apps_oidc_sub_prefix}:ref:refs/heads/main"]
+    }
+  }
+}
+
+resource "aws_iam_role" "ecr_push" {
+  name                 = "shipyard-gha-ecr-push"
+  description          = "GitHub Actions (shipyard-apps main): push images to shipyard/* ECR repos"
+  assume_role_policy   = data.aws_iam_policy_document.ecr_push_trust.json
+  max_session_duration = 3600
+}
+
+data "aws_iam_policy_document" "ecr_push" {
+  # GetAuthorizationToken can't be scoped to a repo; AWS requires "*"
+  statement {
+    sid       = "EcrLogin"
+    actions   = ["ecr:GetAuthorizationToken"]
+    resources = ["*"]
+  }
+
+  statement {
+    sid = "PushShipyardImages"
+    actions = [
+      "ecr:BatchCheckLayerAvailability",
+      "ecr:InitiateLayerUpload",
+      "ecr:UploadLayerPart",
+      "ecr:CompleteLayerUpload",
+      "ecr:PutImage",
+      "ecr:BatchGetImage",
+      "ecr:GetDownloadUrlForLayer",
+      "ecr:DescribeImages",
+    ]
+    resources = ["arn:aws:ecr:us-east-1:${var.aws_account_id}:repository/shipyard/*"]
+  }
+}
+
+resource "aws_iam_role_policy" "ecr_push" {
+  name   = "push-shipyard-images"
+  role   = aws_iam_role.ecr_push.id
+  policy = data.aws_iam_policy_document.ecr_push.json
+}
