@@ -17,3 +17,19 @@ output "cluster_name" {
 output "cluster_endpoint" {
   value = try(module.eks[0].cluster_endpoint, null)
 }
+
+output "orders_queue_url" {
+  value = module.orders_queue.queue_url
+}
+
+output "orders_dlq_url" {
+  value = module.orders_queue.dlq_url
+}
+
+output "rds_address" {
+  value = try(module.rds[0].address, null)
+}
+
+output "rds_secret_arn" {
+  value = try(module.rds[0].master_user_secret_arn, null)
+}
