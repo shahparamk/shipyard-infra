@@ -86,3 +86,33 @@ resource "aws_eks_pod_identity_association" "orders_worker" {
   service_account = "orders-worker"
   role_arn        = aws_iam_role.orders_worker.arn
 }
+
+# ---------------- External Secrets: may only READ shipyard/dev/* secrets ----------------
+
+resource "aws_iam_role" "external_secrets" {
+  name               = "${local.name}-external-secrets"
+  assume_role_policy = data.aws_iam_policy_document.pod_identity_trust.json
+}
+
+data "aws_iam_policy_document" "external_secrets" {
+  statement {
+    actions = ["secretsmanager:GetSecretValue", "secretsmanager:DescribeSecret"]
+    # Secrets Manager adds a random 6-character suffix to ARNs, hence the trailing wildcard
+    resources = ["arn:aws:secretsmanager:us-east-1:${data.aws_caller_identity.current.account_id}:secret:shipyard/dev/*"]
+  }
+}
+
+resource "aws_iam_role_policy" "external_secrets" {
+  name   = "read-dev-secrets"
+  role   = aws_iam_role.external_secrets.id
+  policy = data.aws_iam_policy_document.external_secrets.json
+}
+
+resource "aws_eks_pod_identity_association" "external_secrets" {
+  count = local.cluster_enabled ? 1 : 0
+
+  cluster_name    = module.eks[0].cluster_name
+  namespace       = "external-secrets"
+  service_account = "external-secrets"
+  role_arn        = aws_iam_role.external_secrets.arn
+}

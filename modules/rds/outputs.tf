@@ -10,9 +10,12 @@ output "db_name" {
   value = aws_db_instance.this.db_name
 }
 
-output "master_user_secret_arn" {
-  description = "Secrets Manager secret holding the generated credentials"
-  value       = aws_db_instance.this.master_user_secret[0].secret_arn
+output "secret_arn" {
+  value = aws_secretsmanager_secret.db.arn
+}
+
+output "secret_name" {
+  value = aws_secretsmanager_secret.db.name
 }
 
 output "security_group_id" {

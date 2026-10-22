@@ -52,3 +52,14 @@ variable "tags" {
   type    = map(string)
   default = {}
 }
+
+variable "secret_name" {
+  description = "Stable Secrets Manager name holding host/port/dbname/username/password"
+  type        = string
+}
+
+variable "credentials_version" {
+  description = "Bump this number to rotate the database password"
+  type        = number
+  default     = 1
+}
