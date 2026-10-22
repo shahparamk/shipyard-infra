@@ -15,3 +15,9 @@ variable "state_bucket" {
   type        = string
   default     = "shipyard-tfstate-717279721195"
 }
+
+variable "apps_oidc_sub_prefix" {
+  description = "Immutable OIDC subject prefix for shipyard-apps. From: gh api repos/shahparamk/shipyard-apps/actions/oidc/customization/sub"
+  type        = string
+  default     = "repo:shahparamk@181007379/shipyard-apps@1430162568" # <-- paste yours
+}
