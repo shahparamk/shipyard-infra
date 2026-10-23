@@ -5,7 +5,7 @@ variable "aws_account_id" {
 }
 
 locals {
-  repositories = toset(["api", "worker"])
+  repositories = toset(["api", "worker", "web"])
 }
 
 resource "aws_ecr_repository" "this" {
