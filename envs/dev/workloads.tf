@@ -1,4 +1,4 @@
-# Each app gets its own IAM role, tied to one Kubernetes namespace + service account.
+# Each workload gets its own IAM role, tied to one Kubernetes namespace + service account.
 locals {
   app_namespace = "shipyard"
 }
@@ -67,7 +67,7 @@ resource "aws_iam_role_policy" "orders_worker" {
   policy = data.aws_iam_policy_document.orders_worker.json
 }
 
-# ---------------- Bind roles to service accounts (only while the cluster exists) ----------------
+# ---------------- Bind app roles to service accounts (only while the cluster exists) ----------------
 
 resource "aws_eks_pod_identity_association" "orders_api" {
   count = local.cluster_enabled ? 1 : 0
@@ -115,4 +115,78 @@ resource "aws_eks_pod_identity_association" "external_secrets" {
   namespace       = "external-secrets"
   service_account = "external-secrets"
   role_arn        = aws_iam_role.external_secrets.arn
+}
+
+# ---------------- AWS Load Balancer Controller: builds ALBs from Ingresses ----------------
+
+resource "aws_iam_role" "aws_load_balancer_controller" {
+  name               = "${local.name}-aws-load-balancer-controller"
+  assume_role_policy = data.aws_iam_policy_document.pod_identity_trust.json
+}
+
+# Official upstream policy for controller v3.6.0, vendored so changes show up in PRs
+resource "aws_iam_policy" "aws_load_balancer_controller" {
+  name        = "${local.name}-aws-load-balancer-controller"
+  description = "Official AWS Load Balancer Controller policy (v3.6.0), vendored from upstream"
+  policy      = file("${path.module}/policies/aws-load-balancer-controller.json")
+}
+
+resource "aws_iam_role_policy_attachment" "aws_load_balancer_controller" {
+  role       = aws_iam_role.aws_load_balancer_controller.name
+  policy_arn = aws_iam_policy.aws_load_balancer_controller.arn
+}
+
+resource "aws_eks_pod_identity_association" "aws_load_balancer_controller" {
+  count = local.cluster_enabled ? 1 : 0
+
+  cluster_name    = module.eks[0].cluster_name
+  namespace       = "kube-system"
+  service_account = "aws-load-balancer-controller"
+  role_arn        = aws_iam_role.aws_load_balancer_controller.arn
+}
+
+# ---------------- ExternalDNS: may only manage records in OUR hosted zone ----------------
+
+data "aws_route53_zone" "public" {
+  name = "paramshah.tech"
+}
+
+resource "aws_iam_role" "external_dns" {
+  name               = "${local.name}-external-dns"
+  assume_role_policy = data.aws_iam_policy_document.pod_identity_trust.json
+}
+
+data "aws_iam_policy_document" "external_dns" {
+  # Write + read records: only this one zone
+  statement {
+    sid = "ManageRecordsInOurZone"
+    actions = [
+      "route53:ChangeResourceRecordSets",
+      "route53:ListResourceRecordSets",
+      "route53:ListTagsForResources",
+    ]
+    resources = ["arn:aws:route53:::hostedzone/${data.aws_route53_zone.public.zone_id}"]
+  }
+
+  # Zone discovery: ListHostedZones can't be scoped to a single zone, so AWS requires "*"
+  statement {
+    sid       = "DiscoverZones"
+    actions   = ["route53:ListHostedZones"]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_role_policy" "external_dns" {
+  name   = "manage-public-zone-records"
+  role   = aws_iam_role.external_dns.id
+  policy = data.aws_iam_policy_document.external_dns.json
+}
+
+resource "aws_eks_pod_identity_association" "external_dns" {
+  count = local.cluster_enabled ? 1 : 0
+
+  cluster_name    = module.eks[0].cluster_name
+  namespace       = "external-dns"
+  service_account = "external-dns"
+  role_arn        = aws_iam_role.external_dns.arn
 }
