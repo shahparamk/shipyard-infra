@@ -30,9 +30,13 @@ module "eks" {
   count  = local.cluster_enabled ? 1 : 0
 
   cluster_name       = local.cluster_name
-  kubernetes_version = "1.37" # <-- replace with the default version from Step 0
+  kubernetes_version = "1.37"
   subnet_ids         = module.vpc.private_subnet_ids
   admin_role_arns    = tolist(data.aws_iam_roles.sso_admin.arns)
+
+  # t3.medium fits at most 17 pods (each pod uses a VPC IP); the monitoring stack needs a third node
+  node_desired_size = 3
+  node_max_size     = 4
 }
 
 # Always on: SQS costs nothing when idle
