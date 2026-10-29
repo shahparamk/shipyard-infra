@@ -190,3 +190,25 @@ resource "aws_eks_pod_identity_association" "external_dns" {
   service_account = "external-dns"
   role_arn        = aws_iam_role.external_dns.arn
 }
+
+# ---------------- KEDA: may only READ the orders queue's depth ----------------
+
+resource "aws_iam_role" "keda_operator" {
+  name               = "${local.name}-keda-operator"
+  assume_role_policy = data.aws_iam_policy_document.pod_identity_trust.json
+}
+
+data "aws_iam_policy_document" "keda_operator" {
+  # Read-only: how many messages are waiting / in flight. KEDA can't send, receive, or delete.
+  statement {
+    actions   = ["sqs:GetQueueAttributes"]
+    resources = [module.orders_queue.queue_arn]
+  }
+}
+
+resource "aws_iam_role_policy" "keda_operator" {
+  name   = "read-orders-queue-depth"
+  role   = aws_iam_role.keda_operator.id
+  policy = data.aws_iam_policy_document.keda_operator.json
+}
+
