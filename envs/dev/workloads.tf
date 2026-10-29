@@ -212,3 +212,11 @@ resource "aws_iam_role_policy" "keda_operator" {
   policy = data.aws_iam_policy_document.keda_operator.json
 }
 
+resource "aws_eks_pod_identity_association" "keda_operator" {
+  count = local.cluster_enabled ? 1 : 0
+
+  cluster_name    = module.eks[0].cluster_name
+  namespace       = "keda"
+  service_account = "keda-operator" # must match the KEDA chart's operator service account
+  role_arn        = aws_iam_role.keda_operator.arn
+}
