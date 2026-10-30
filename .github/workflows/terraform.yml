@@ -1,13 +1,10 @@
 name: terraform
 
 on:
+  # Every PR runs fmt/tflint/Checkov + plan, so required checks always report
   pull_request:
     branches: [main]
-    paths:
-      - "envs/**"
-      - "modules/**"
-      - ".tflint.hcl"
-      - ".github/workflows/terraform.yml"
+  # Applying only happens when Terraform actually changed (avoids approving no-op applies)
   push:
     branches: [main]
     paths:
