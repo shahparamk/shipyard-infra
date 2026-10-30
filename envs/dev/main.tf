@@ -35,8 +35,10 @@ module "eks" {
   admin_role_arns    = tolist(data.aws_iam_roles.sso_admin.arns)
 
   # t3.medium fits at most 17 pods (each pod uses a VPC IP); the monitoring stack needs a third node
-  node_desired_size = 3
-  node_max_size     = 4
+  # t3.medium fits at most 17 pods (each pod uses a VPC IP). With monitoring, logs, KEDA, and
+  # cert-manager, peak load needs a 4th node until Karpenter scales nodes on demand.
+  node_desired_size = 4
+  node_max_size     = 5
 }
 
 # Always on: SQS costs nothing when idle
