@@ -4,7 +4,7 @@ locals {
 
   # ONE switch for the expensive parts (EKS + NAT gateway).
   # true = environment up (~$0.25-0.30/hr), false = torn down (~$0)
-  cluster_enabled = true
+  cluster_enabled = false
 }
 
 # Your IAM Identity Center admin role, so your SSO login works with kubectl
