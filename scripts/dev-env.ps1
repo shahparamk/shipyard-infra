@@ -146,6 +146,8 @@ if ($State -eq "up") {
     Write-Host "  helm install external-secrets external-secrets/external-secrets -n external-secrets --create-namespace --version 2.12.0 --wait"
     Write-Host "  helm install argocd argo/argo-cd -n argocd --create-namespace --version 10.10.1 --wait"
     Write-Host "  kubectl apply -f ..\shipyard-gitops\argocd\root.yaml"
+    Write-Host "Then wait until the ALB is 'active' (2-3 min after the Ingress appears) before opening the site:"
+    Write-Host "  aws elbv2 describe-load-balancers --query `"LoadBalancers[?contains(LoadBalancerName,'shipyard')].[LoadBalancerName,State.Code]`" --output table"
 } else {
     Write-Host "After apply finishes (about 10-15 min), billing for EKS + NAT + RDS stops."
 }
